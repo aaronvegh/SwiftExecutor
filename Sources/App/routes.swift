@@ -3,23 +3,33 @@ import Vapor
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
     
-    // Basic "It works" example
-    router.get { req in
-        return "It works!"
-    }
+    let fmController = FileManagerController()
+    router.get("ls", use: fmController.index)
+    router.get(["ls", all], use: fmController.index)
     
-    router.get("ls", "*") { req in
-        return "found this"
-    }
+    router.get("mkdir", use: fmController.mkdir)
+    router.get(["mkdir", all], use: fmController.mkdir)
     
-    // Basic "Hello, world!" example
-    router.get("hello") { req in
-        return "Hello, world!"
-    }
-
-    // Example of configuring a controller
-    let todoController = TodoController()
-    router.get("todos", use: todoController.index)
-    router.post("todos", use: todoController.create)
-    router.delete("todos", Todo.parameter, use: todoController.delete)
+    router.get("touch", use: fmController.touch)
+    router.get(["touch", all], use: fmController.touch)
+    
+    router.post("mv", use: fmController.mv)
+    
+    router.get("read", use: fmController.read)
+    router.get(["read", all], use: fmController.read)
+    
+    router.get("binaryread", use: fmController.binaryRead)
+    router.get(["binaryread", all], use: fmController.binaryRead)
+    
+    router.post("write", use: fmController.write)
+    router.post(["write", all], use: fmController.write)
+    
+    router.post("upload", use: fmController.upload)
+    router.post(["upload", all], use: fmController.upload)
+    
+    router.get("rm", use: fmController.rm)
+    router.get(["rm", all], use: fmController.rm)
+    
+    router.get("rmdir", use: fmController.rm)
+    router.get(["rmdir", all], use: fmController.rm)
 }
