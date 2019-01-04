@@ -11,7 +11,7 @@ let package = Package(
         .package(url: "https://github.com/vapor/fluent-sqlite.git", from: "3.0.0")
     ],
     targets: [
-        .target(name: "App", dependencies: ["FluentSQLite", "Vapor", "JWT"]),
+        .target(name: "App", dependencies: ["FluentSQLite", "Vapor"]),
         .target(name: "Run", dependencies: ["App"]),
         .testTarget(name: "AppTests", dependencies: ["App"])
     ]
