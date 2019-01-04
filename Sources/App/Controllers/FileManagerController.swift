@@ -27,7 +27,6 @@ class FileManagerController {
                 let isBinary = FileUtilities.isBinary(itemURL)
                 let isDirectory = attributes.isDirectory
                 let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
-//                _ = fileItem.save(on: req)
                 lsResult.append(fileItem)
             }
             return req.eventLoop.newSucceededFuture(result: lsResult)
@@ -124,19 +123,17 @@ class FileManagerController {
         return HTTPResponseStatus.init(statusCode: 500)
     }
     
-    func upload(_ req: Request) throws -> Future<HTTPStatus> {
+    func upload(_ req: Request) throws -> HTTPResponseStatus {
         let path = req.http.url.absoluteString
         let requestedPath = path.replacingOccurrences(of: "/upload", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
         do {
-            return try req.content.decode(File.self).map { payload in
-                try payload.data.write(to: workingPath)
-                return HTTPResponseStatus.init(statusCode: 200)
-            }
+            guard let payload = req.http.body.data else { return HTTPResponseStatus.init(statusCode: 500) }
+            try payload.write(to: workingPath)
+            return HTTPResponseStatus.init(statusCode: 200)
         } catch {
-            let errorResponse = HTTPResponseStatus.init(statusCode: 500)
-            return req.eventLoop.newSucceededFuture(result: errorResponse)
+            return HTTPResponseStatus.init(statusCode: 200)
         }
     }
     

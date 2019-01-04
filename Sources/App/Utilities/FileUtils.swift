@@ -21,7 +21,7 @@ struct FileAttributes {
 
 struct FileUtilities {
     
-    static let baseURL = URL(fileURLWithPath: "/Users/aaron/Sites/37s")
+    static let baseURL = URL(fileURLWithPath: "/home/codewerks/project")
     
     /// The resource keys we want to grab for each file
     static let propertyKeys: [URLResourceKey] = [kCFURLNameKey as URLResourceKey,
@@ -93,4 +93,20 @@ struct FileUtilities {
         let urlString = url.absoluteString
         return urlString.replacingOccurrences(of: rootString, with: "")
     }
+    
+    static func shell(_ command: String) -> String {
+        let task = Process()
+        task.launchPath = "/bin/bash"
+        task.arguments = ["-c", command]
+        
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.launch()
+        
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let output: String = NSString(data: data, encoding: String.Encoding.utf8.rawValue)! as String
+        
+        return output
+    }
+
 }
