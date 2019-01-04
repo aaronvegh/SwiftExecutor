@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreFoundation
 import Crypto
 import Random
 
@@ -23,11 +24,7 @@ struct FileUtilities {
     static let baseURL = URL(fileURLWithPath: "/home/codewerks/project")
     
     /// The resource keys we want to grab for each file
-    static let propertyKeys: [URLResourceKey] = [kCFURLNameKey as URLResourceKey,
-                                                 kCFURLFileSizeKey as URLResourceKey,
-                                                 kCFURLIsHiddenKey as URLResourceKey,
-                                                 kCFURLIsDirectoryKey as URLResourceKey,
-                                                 kCFURLContentAccessDateKey as URLResourceKey]
+    static let propertyKeys: [URLResourceKey] = [.nameKey, .fileSizeKey, .isHiddenKey, .isDirectoryKey, .contentAccessDateKey]
     
     /// Return the attributes for the given file, which should've been cached when initializing
     static func attributes(for file: URL) -> FileAttributes? {
