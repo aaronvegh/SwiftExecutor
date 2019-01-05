@@ -21,7 +21,7 @@ public final class TokenAuthMiddleware: Middleware, ServiceType {
     public func respond(to request: Request, chainingTo next: Responder) throws -> EventLoopFuture<Response> {
         if let bearer = request.http.headers.bearerAuthorization {
             
-            let ownerToken = FileUtilities.shell("curl -s --unix-socket /dev/lxd/sock http://x/1.0/config/user.token")
+            let ownerToken = FileUtilities.shell("sudo curl -s --unix-socket /dev/lxd/sock http://x/1.0/config/user.token")
             
             let httpRequest = HTTPRequest(method: .GET, url: "/users/valid", headers: ["Authorization": "Bearer \(bearer.token)"])
             
