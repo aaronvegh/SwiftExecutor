@@ -29,13 +29,13 @@ struct FileUtilities {
     /// Return the attributes for the given file, which should've been cached when initializing
     static func attributes(for file: URL) -> FileAttributes? {
         do {
-            let propertyKeySet: Set<URLResourceKey> = Set(FileUtilities.propertyKeys.map { $0 })
-            let resourceKeys = try file.resourceValues(forKeys: propertyKeySet)
-            let isDirectory = resourceKeys.isDirectory ?? false
-            let fileName = resourceKeys.name ?? ""
-            let fileSize = resourceKeys.fileSize ?? 0
-            let isHidden = resourceKeys.isHidden ?? false
-            let lastUpdated = resourceKeys.contentAccessDate ?? Date()
+            let resourceKeys: [FileAttributeKey: Any] = try FileManager.default.attributesOfItem(atPath: file.path)
+            guard let fileType = resourceKeys[.type] as? String,
+                  let fileSize = resourceKeys[.size] as? Int64,
+                  let lastUpdated = resourceKeys[.modificationDate] as? Date else { return nil }
+            let fileName = file.lastPathComponent
+            let isHidden = file.lastPathComponent.first == "."
+            let isDirectory = fileType == FileAttributeType.typeDirectory.rawValue
             
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .medium
