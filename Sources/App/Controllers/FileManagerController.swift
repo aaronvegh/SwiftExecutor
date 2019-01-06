@@ -6,7 +6,7 @@
 //
 
 import Vapor
-import CoreFoundation
+import Foundation
 
 class FileManagerController {
     

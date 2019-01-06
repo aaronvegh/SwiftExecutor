@@ -30,12 +30,12 @@ struct FileUtilities {
     static func attributes(for file: URL) -> FileAttributes? {
         do {
             let resourceKeys: [FileAttributeKey: Any] = try FileManager.default.attributesOfItem(atPath: file.path)
-            guard let fileType = resourceKeys[.type] as? String,
+            guard let fileType = resourceKeys[.type] as? FileAttributeType,
                   let fileSize = resourceKeys[.size] as? Int64,
                   let lastUpdated = resourceKeys[.modificationDate] as? Date else { return nil }
             let fileName = file.lastPathComponent
             let isHidden = file.lastPathComponent.first == "."
-            let isDirectory = fileType == FileAttributeType.typeDirectory.rawValue
+            let isDirectory = fileType == FileAttributeType.typeDirectory
             
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .medium
