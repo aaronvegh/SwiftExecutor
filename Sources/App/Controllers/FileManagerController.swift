@@ -10,6 +10,10 @@ import CoreFoundation
 
 class FileManagerController {
     
+    enum FileManagerErrors: Error {
+        case ServerError
+    }
+    
     func index(_ req: Request) throws -> Future<[FileItem]> {
         let path = req.http.url.absoluteString
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
@@ -31,7 +35,7 @@ class FileManagerController {
             }
             return req.eventLoop.newSucceededFuture(result: lsResult)
         } catch {
-            return req.eventLoop.newSucceededFuture(result: [])
+            return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
         }
     }
     
