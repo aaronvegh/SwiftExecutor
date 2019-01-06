@@ -16,7 +16,6 @@ struct FileAttributes {
     let isHidden: Bool
     let isDirectory: Bool
     let lastUpdated: Date
-    let lastUpdatedAgo: String
 }
 
 struct FileUtilities {
@@ -38,9 +37,8 @@ struct FileUtilities {
             let isDirectory = fileType == FileAttributeType.typeDirectory
             
             let fileSizeWithUnit = ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
-            let lastModAgo = timeAgoSince(lastUpdated)
             
-            return FileAttributes(name: fileName, fileSize: fileSizeWithUnit, isHidden: isHidden, isDirectory: isDirectory, lastUpdated: lastUpdated, lastUpdatedAgo: lastModAgo)
+            return FileAttributes(name: fileName, fileSize: fileSizeWithUnit, isHidden: isHidden, isDirectory: isDirectory, lastUpdated: lastUpdated)
         } catch {
             return nil
         }
