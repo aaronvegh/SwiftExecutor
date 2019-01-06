@@ -24,10 +24,8 @@ class FileManagerController {
             let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
             for item in items {
                 let itemURL = workingPath.appendingPathComponent(item)
-                print("Item URL: \(itemURL)")
                 guard let itemMD5 = FileUtilities.md5(for: itemURL),
                       let attributes = FileUtilities.attributes(for: itemURL) else { continue }
-                print("Item attributes: \(attributes)")
                 let modDate = attributes.lastUpdated
                 let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
                 let isBinary = FileUtilities.isBinary(itemURL)
