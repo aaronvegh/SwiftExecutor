@@ -37,9 +37,6 @@ struct FileUtilities {
             let isHidden = file.lastPathComponent.first == "."
             let isDirectory = fileType == FileAttributeType.typeDirectory
             
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateStyle = .medium
-            dateFormatter.timeStyle = .medium
             let fileSizeWithUnit = ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
             let lastModAgo = timeAgoSince(lastUpdated)
             
