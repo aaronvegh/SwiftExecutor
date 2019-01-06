@@ -22,6 +22,7 @@ class FileManagerController {
         do {
             var lsResult = [FileItem]()
             let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
+            print("Items: \(items)")
             for item in items {
                 let itemURL = workingPath.appendingPathComponent(item)
                 guard let itemMD5 = FileUtilities.md5(for: itemURL),
