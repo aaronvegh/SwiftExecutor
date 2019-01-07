@@ -9,6 +9,7 @@ import Foundation
 import CoreFoundation
 import Crypto
 import Random
+import Vapor
 
 struct FileAttributes {
     let name: String
@@ -21,6 +22,9 @@ struct FileAttributes {
 struct FileUtilities {
     
     static let baseURL = URL(fileURLWithPath: "/home/codewerks/project")
+//    static let baseURL = URL(fileURLWithPath: "/Users/aaron/Developer/CodewerksProjects/SwiftExecutor")
+
+    static let ignoreFiles = [".build", ".git"]
     
     /// The resource keys we want to grab for each file
     static let propertyKeys: [URLResourceKey] = [.nameKey, .fileSizeKey, .isHiddenKey, .isDirectoryKey, .contentAccessDateKey]
@@ -50,7 +54,8 @@ struct FileUtilities {
                 let digest = Digest(algorithm: .sha256)
                 try digest.reset()
                 if attributes.isDirectory {
-                    try digest.update(data: url.absoluteString)
+                    let remotePath = FileUtilities.remotePath(for: url, from: FileUtilities.baseURL)
+                    try digest.update(data: remotePath  )
                     let digest = try digest.finish()
                     return digest.hexEncodedString()
                 } else {

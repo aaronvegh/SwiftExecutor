@@ -23,15 +23,17 @@ class FileManagerController {
             var lsResult = [FileItem]()
             let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
             for item in items {
-                let itemURL = workingPath.appendingPathComponent(item)
-                guard let itemMD5 = FileUtilities.md5(for: itemURL),
-                      let attributes = FileUtilities.attributes(for: itemURL) else { continue }
-                let modDate = attributes.lastUpdated
-                let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
-                let isBinary = FileUtilities.isBinary(itemURL)
-                let isDirectory = attributes.isDirectory
-                let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
-                lsResult.append(fileItem)
+                if !FileUtilities.ignoreFiles.contains(item) {
+                    let itemURL = workingPath.appendingPathComponent(item)
+                    let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
+                    guard let itemMD5 = FileUtilities.md5(for: itemURL),
+                          let attributes = FileUtilities.attributes(for: itemURL) else { continue }
+                    let modDate = attributes.lastUpdated
+                    let isBinary = FileUtilities.isBinary(itemURL)
+                    let isDirectory = attributes.isDirectory
+                    let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
+                    lsResult.append(fileItem)
+                }
             }
             return req.eventLoop.newSucceededFuture(result: lsResult)
         } catch {
