@@ -9,9 +9,23 @@ import Vapor
 
 public final class TokenAuthMiddleware: Middleware, ServiceType {
     
-    enum TokenError: Error {
-        case ServerError
-        case AuthenticationError
+    enum TokenError: Error, Debuggable {
+        var identifier: String {
+            switch self {
+            case .ServerError(_): return "Server Error"
+            case .AuthenticationError(_): return "Authentication Error"
+            }
+        }
+        
+        var reason: String {
+            switch self {
+            case .ServerError(let reason): return reason
+            case .AuthenticationError(let reason): return reason
+            }
+        }
+        
+        case ServerError(String)
+        case AuthenticationError(String)
     }
     
     public static func makeService(for container: Container) throws -> Self {
@@ -32,12 +46,12 @@ public final class TokenAuthMiddleware: Middleware, ServiceType {
                         if let remoteData = response.body.data, let remoteToken = String(data: remoteData, encoding: String.Encoding.utf8), remoteToken == ownerToken {
                             return try next.respond(to: request)
                         } else {
-                            return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError)
+                            return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError("Failed to get auth response from upstream."))
                         }
                     })
                 })
             } else {
-                return request.eventLoop.newFailedFuture(error: TokenError.ServerError)
+                return request.eventLoop.newFailedFuture(error: TokenError.ServerError("Client didn't send auth header."))
             }
 //        } else {
 //            return try next.respond(to: request)
