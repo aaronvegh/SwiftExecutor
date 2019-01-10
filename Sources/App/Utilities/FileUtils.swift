@@ -55,13 +55,12 @@ struct FileUtilities {
                 try digest.reset()
                 if attributes.isDirectory {
                     let remotePath = FileUtilities.remotePath(for: url, from: FileUtilities.baseURL)
-                    try digest.update(data: remotePath  )
+                    try digest.update(data: remotePath)
                     let digest = try digest.finish()
                     return digest.hexEncodedString()
                 } else {
-                    let modDate = Int(attributes.lastUpdated.timeIntervalSince1970)
-                    let remotePath = FileUtilities.remotePath(for: url, from: FileUtilities.baseURL)
-                    try digest.update(data: "\(remotePath)/\(modDate)")
+                    let data = try Data(contentsOf: url)
+                    try digest.update(data: data)
                     let digest = try digest.finish()
                     return digest.hexEncodedString()
                 }
