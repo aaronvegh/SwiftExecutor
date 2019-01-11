@@ -10,6 +10,8 @@ import Foundation
 
 class FileManagerController {
     
+    private let ownershipAttrs: [FileAttributeKey: Any] = [.groupOwnerAccountName: "codewerks", .ownerAccountName: "codewerks"]
+    
     enum FileManagerErrors: Error {
         case ServerError
     }
@@ -47,7 +49,7 @@ class FileManagerController {
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
         do {
-            try FileManager.default.createDirectory(at: workingPath, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default.createDirectory(at: workingPath, withIntermediateDirectories: true, attributes: ownershipAttrs)
             return HTTPResponseStatus.init(statusCode: 200)
         } catch {
             return HTTPResponseStatus.init(statusCode: 500)
@@ -59,7 +61,7 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/touch", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
-        if FileManager.default.createFile(atPath: workingPath.path, contents: nil, attributes: nil) {
+        if FileManager.default.createFile(atPath: workingPath.path, contents: nil, attributes: ownershipAttrs) {
             return HTTPResponseStatus.init(statusCode: 200)
         } else {
             return HTTPResponseStatus.init(statusCode: 500)
@@ -121,6 +123,7 @@ class FileManagerController {
             let content = String(data: bytes, encoding: String.Encoding.utf8)
             do {
                 try content?.write(to: workingPath, atomically: true, encoding: String.Encoding.utf8)
+                setOwnership(for: workingPath)
                 return HTTPResponseStatus.init(statusCode: 200)
             } catch {
                 return HTTPResponseStatus.init(statusCode: 403)
@@ -137,6 +140,7 @@ class FileManagerController {
         do {
             guard let payload = req.http.body.data else { return HTTPResponseStatus.init(statusCode: 500) }
             try payload.write(to: workingPath)
+            setOwnership(for: workingPath)
             return HTTPResponseStatus.init(statusCode: 200)
         } catch {
             return HTTPResponseStatus.init(statusCode: 200)
@@ -154,6 +158,10 @@ class FileManagerController {
         } catch {
             return HTTPResponseStatus.init(statusCode: 403)
         }
+    }
+    
+    private func setOwnership(for file: URL) {
+        try? FileManager.default.setAttributes(ownershipAttrs, ofItemAtPath: file.path)
     }
     
 }
