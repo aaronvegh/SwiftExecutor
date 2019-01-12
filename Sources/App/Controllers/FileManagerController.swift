@@ -10,8 +10,6 @@ import Foundation
 
 class FileManagerController {
     
-    private let ownershipAttrs: [FileAttributeKey: Any] = [.groupOwnerAccountName: "codewerks", .ownerAccountName: "codewerks"]
-    
     enum FileManagerErrors: Error {
         case ServerError
     }
@@ -49,7 +47,8 @@ class FileManagerController {
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
         do {
-            try FileManager.default.createDirectory(at: workingPath, withIntermediateDirectories: true, attributes: ownershipAttrs)
+            try FileManager.default.createDirectory(at: workingPath, withIntermediateDirectories: true, attributes: nil)
+            setOwnership(for: workingPath)
             return HTTPResponseStatus.init(statusCode: 200)
         } catch {
             return HTTPResponseStatus.init(statusCode: 500)
@@ -61,7 +60,8 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/touch", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
-        if FileManager.default.createFile(atPath: workingPath.path, contents: nil, attributes: ownershipAttrs) {
+        if FileManager.default.createFile(atPath: workingPath.path, contents: nil, attributes: nil) {
+            setOwnership(for: workingPath)
             return HTTPResponseStatus.init(statusCode: 200)
         } else {
             return HTTPResponseStatus.init(statusCode: 500)
@@ -161,7 +161,10 @@ class FileManagerController {
     }
     
     private func setOwnership(for file: URL) {
-        try? FileManager.default.setAttributes(ownershipAttrs, ofItemAtPath: file.path)
+        let task = Process()
+        task.launchPath = "/bin/chown"
+        task.arguments = ["codewerks:codewerks", file.absoluteString]
+        task.launch()
     }
     
 }
