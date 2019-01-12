@@ -163,7 +163,7 @@ class FileManagerController {
     private func setOwnership(for file: URL) {
         let task = Process()
         task.launchPath = "/bin/chown"
-        task.arguments = ["codewerks:codewerks", file.absoluteString]
+        task.arguments = ["codewerks:codewerks", file.path]
         task.launch()
     }
     
