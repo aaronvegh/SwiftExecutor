@@ -34,10 +34,10 @@ class FileManagerController {
                     guard let itemMD5 = FileUtilities.md5(for: itemURL),
                           let attributes = FileUtilities.attributes(for: itemURL) else { continue }
                     print("md5: \(itemMD5), attrs: \(attributes)")
-//                    let modDate = attributes.lastUpdated
+                    let modDate = attributes.lastUpdated
                     let isBinary = FileUtilities.isBinary(itemURL)
                     let isDirectory = attributes.isDirectory
-                    let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, parentDir: requestedPath)
+                    let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
                     print("FileItem: \(fileItem)")
                     lsResult.append(fileItem)
                 }

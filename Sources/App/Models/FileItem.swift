@@ -10,7 +10,7 @@ import Vapor
 
 final class FileItem: Content {
     /// The unique identifier for this `FileItem`.
-    var id: UUID?
+//    var id: UUID?
     
     /// A URL string for the file item
     var name: String?
@@ -31,23 +31,24 @@ final class FileItem: Content {
     var md5: String?
     
     /// the file's modified date
-//    var modDate: Date?
+    var modDate: Date?
     
     /// Creates a new `Todo`.
-    init(name: String, isDeleted: Bool, isDirectory: Bool, isBinary: Bool, md5: String, parentDir: String) {
+    init(name: String, isDeleted: Bool, isDirectory: Bool, isBinary: Bool, md5: String, modDate: Date, parentDir: String) {
         self.name = name
         self.isDeleted = isDeleted
         self.isDirectory = isDirectory
         self.isBinary = isBinary
         self.md5 = md5
+        self.modDate = modDate
         self.parentDir = parentDir
     }
 }
 
-extension FileItem: SQLiteUUIDModel { }
+//extension FileItem: SQLiteUUIDModel { }
 
 /// Allows `FileItem` to be used as a dynamic migration.
-extension FileItem: Migration { }
+//extension FileItem: Migration { }
 
 /// Allows `FileItem` to be used as a dynamic parameter in route definitions.
-extension FileItem: Parameter { }
+//extension FileItem: Parameter { }
