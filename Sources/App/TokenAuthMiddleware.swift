@@ -44,6 +44,7 @@ public final class TokenAuthMiddleware: Middleware, ServiceType {
                 
                 return HTTPClient.connect(scheme: .https, hostname: "codewerks.app", port: 81, on: request).flatMap(to: Response.self, { client in
                     return client.send(httpRequest).flatMap(to: Response.self) { response in
+                        print("Response: \(response.body)")
                         if let remoteData = response.body.data, let remoteToken = String(data: remoteData, encoding: String.Encoding.utf8), remoteToken == ownerToken {
                             return try next.respond(to: request)
                         } else {
