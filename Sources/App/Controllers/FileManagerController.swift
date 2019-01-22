@@ -14,7 +14,7 @@ class FileManagerController {
         case ServerError
     }
     
-    func index(_ req: Request) throws -> Future<[FileItem]> {
+    func index(_ req: Request) throws -> Future<String> {
         let path = req.http.url.absoluteString
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
