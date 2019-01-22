@@ -18,10 +18,13 @@ class FileManagerController {
         let path = req.http.url.absoluteString
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
+        print("WorkingPath: \(workingPath)")
         
         do {
             var lsResult = [FileItem]()
+            print("Trying contents of directory")
             let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
+            print("Got \(items.count) items")
             for item in items {
                 if !FileUtilities.ignoreFiles.contains(item) {
                     let itemURL = workingPath.appendingPathComponent(item)
@@ -36,7 +39,8 @@ class FileManagerController {
                 }
             }
             return req.eventLoop.newSucceededFuture(result: lsResult)
-        } catch {
+        } catch (let error) {
+            print("Caught failure: \(error.localizedDescription)")
             return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
         }
     }
