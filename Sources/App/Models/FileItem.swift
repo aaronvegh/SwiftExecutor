@@ -31,16 +31,15 @@ final class FileItem: Content {
     var md5: String?
     
     /// the file's modified date
-    var modDate: Date?
+//    var modDate: Date?
     
     /// Creates a new `Todo`.
-    init(name: String, isDeleted: Bool, isDirectory: Bool, isBinary: Bool, md5: String, modDate: Date, parentDir: String) {
+    init(name: String, isDeleted: Bool, isDirectory: Bool, isBinary: Bool, md5: String, parentDir: String) {
         self.name = name
         self.isDeleted = isDeleted
         self.isDirectory = isDirectory
         self.isBinary = isBinary
         self.md5 = md5
-        self.modDate = modDate
         self.parentDir = parentDir
     }
 }

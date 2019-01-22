@@ -14,7 +14,7 @@ class FileManagerController {
         case ServerError
     }
     
-    func index(_ req: Request) throws -> Future<String> {
+    func index(_ req: Request) throws -> Future<[FileItem]> {
         let path = req.http.url.absoluteString
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
@@ -34,16 +34,16 @@ class FileManagerController {
                     guard let itemMD5 = FileUtilities.md5(for: itemURL),
                           let attributes = FileUtilities.attributes(for: itemURL) else { continue }
                     print("md5: \(itemMD5), attrs: \(attributes)")
-                    let modDate = attributes.lastUpdated
+//                    let modDate = attributes.lastUpdated
                     let isBinary = FileUtilities.isBinary(itemURL)
                     let isDirectory = attributes.isDirectory
-                    let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
+                    let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, parentDir: requestedPath)
                     print("FileItem: \(fileItem)")
                     lsResult.append(fileItem)
                 }
             }
             print("Result has \(lsResult.count)")
-            return req.eventLoop.newSucceededFuture(result: "lsResult")
+            return req.eventLoop.newSucceededFuture(result: lsResult)
         } catch (let error) {
             print("Caught failure: \(error.localizedDescription)")
             return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
