@@ -27,17 +27,22 @@ class FileManagerController {
             print("Got \(items.count) items")
             for item in items {
                 if !FileUtilities.ignoreFiles.contains(item) {
+                    print("Looking at \(item)")
                     let itemURL = workingPath.appendingPathComponent(item)
                     let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
+                    print("Remote path: \(remotePath)")
                     guard let itemMD5 = FileUtilities.md5(for: itemURL),
                           let attributes = FileUtilities.attributes(for: itemURL) else { continue }
+                    print("md5: \(itemMD5), attrs: \(attributes)")
                     let modDate = attributes.lastUpdated
                     let isBinary = FileUtilities.isBinary(itemURL)
                     let isDirectory = attributes.isDirectory
                     let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
+                    print("FileItem: \(fileItem)")
                     lsResult.append(fileItem)
                 }
             }
+            print("Result has \(lsResult.count)")
             return req.eventLoop.newSucceededFuture(result: lsResult)
         } catch (let error) {
             print("Caught failure: \(error.localizedDescription)")
