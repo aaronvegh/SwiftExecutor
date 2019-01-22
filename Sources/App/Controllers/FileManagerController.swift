@@ -43,7 +43,7 @@ class FileManagerController {
                 }
             }
             print("Result has \(lsResult.count)")
-            return req.eventLoop.newSucceededFuture(result: lsResult)
+            return req.eventLoop.newSucceededFuture(result: "lsResult")
         } catch (let error) {
             print("Caught failure: \(error.localizedDescription)")
             return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
