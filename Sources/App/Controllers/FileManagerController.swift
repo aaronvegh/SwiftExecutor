@@ -14,36 +14,40 @@ class FileManagerController {
         case ServerError
     }
     
-    func index(_ req: Request) throws -> Future<[FileItem]> {
+    func index(_ req: Request) throws -> Future<FileItem> {
         let path = req.http.url.absoluteString
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         print("WorkingPath: \(workingPath)")
         
         do {
-            var lsResult = [FileItem]()
+//            var lsResult = [FileItem]()
             print("Trying contents of directory")
             let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
             print("Got \(items.count) items")
-            for item in items {
+//            for item in items {
+            guard let item = items.first else { return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError) }
                 if !FileUtilities.ignoreFiles.contains(item) {
                     print("Looking at \(item)")
                     let itemURL = workingPath.appendingPathComponent(item)
                     let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
                     print("Remote path: \(remotePath)")
                     guard let itemMD5 = FileUtilities.md5(for: itemURL),
-                          let attributes = FileUtilities.attributes(for: itemURL) else { continue }
+                          let attributes = FileUtilities.attributes(for: itemURL) else { return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError) }
                     print("md5: \(itemMD5), attrs: \(attributes)")
                     let modDate = attributes.lastUpdated
                     let isBinary = FileUtilities.isBinary(itemURL)
                     let isDirectory = attributes.isDirectory
                     let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
                     print("FileItem: \(fileItem)")
-                    lsResult.append(fileItem)
-                }
+                    return req.eventLoop.newSucceededFuture(result: fileItem)
+//                    lsResult.append(fileItem)
+                } else {
+                    return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
             }
-            print("Result has \(lsResult.count)")
-            return req.eventLoop.newSucceededFuture(result: lsResult)
+//            }
+//            print("Result has \(lsResult.count)")
+//            return req.eventLoop.newSucceededFuture(result: fileItem)
         } catch (let error) {
             print("Caught failure: \(error.localizedDescription)")
             return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
