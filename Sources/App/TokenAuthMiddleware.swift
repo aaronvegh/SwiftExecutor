@@ -44,9 +44,13 @@ public final class TokenAuthMiddleware: Middleware, ServiceType {
                 
                 return HTTPClient.connect(scheme: .https, hostname: "codewerks.app", port: 81, on: request).flatMap(to: Response.self, { client in
                     return client.send(httpRequest).flatMap(to: Response.self) { response in
-                        print("Response: \(response.body.description)")
                         if response.body.description == ownerToken {
-                            return try next.respond(to: request)
+                            do {
+                                return try next.respond(to: request)
+                            } catch (let error) {
+                                print("Error: \(error.localizedDescription)")
+                                return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError("Issues."))
+                            }
                         } else {
                             return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError("Failed to get auth response from upstream."))
                         }
