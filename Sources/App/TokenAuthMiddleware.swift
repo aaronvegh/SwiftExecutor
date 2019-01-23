@@ -46,6 +46,7 @@ public final class TokenAuthMiddleware: Middleware, ServiceType {
                     return client.send(httpRequest).flatMap(to: Response.self) { response in
                         if response.body.description == ownerToken {
                             do {
+                                print("Got a match!")
                                 return try next.respond(to: request)
                             } catch (let error) {
                                 print("Error: \(error.localizedDescription)")
