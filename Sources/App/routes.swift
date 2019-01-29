@@ -31,4 +31,6 @@ public func routes(_ router: Router) throws {
     
     router.get("rmdir", use: fmController.rm)
     router.get(["rmdir", all], use: fmController.rm)
+    
+    router.get("isDirty", use: fmController.isDirty)
 }

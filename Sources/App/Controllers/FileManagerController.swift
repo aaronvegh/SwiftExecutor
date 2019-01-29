@@ -160,6 +160,16 @@ class FileManagerController {
         }
     }
     
+    func isDirty(_ req: Request) throws -> HTTPResponseStatus {
+        let checkPath = URL(fileURLWithPath: "/home/codewerks/.isDirty")
+        if FileManager.default.fileExists(atPath: checkPath.path) {
+            try? FileManager.default.removeItem(at: checkPath)
+            return HTTPResponseStatus.init(statusCode: 200)
+        } else {
+            return HTTPResponseStatus.init(statusCode: 403)
+        }
+    }
+    
     private func setOwnership(for file: URL) {
         let task = Process()
         task.launchPath = "/bin/chown"
