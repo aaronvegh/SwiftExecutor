@@ -18,11 +18,13 @@ struct MoveObject: Content {
     
     var fromURL: URL {
         let root = FileUtilities.baseURL
+        guard let from = from.removingPercentEncoding else { return root }
         return root.appendingPathComponent(from)
     }
     
     var toURL: URL {
         let root = FileUtilities.baseURL
+        guard let to = to.removingPercentEncoding else { return root }
         return root.appendingPathComponent(to)
     }
 }
