@@ -15,7 +15,7 @@ class FileManagerController {
     }
     
     func index(_ req: Request) throws -> Future<[FileItem]> {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError) }
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
@@ -42,7 +42,7 @@ class FileManagerController {
     }
     
     func mkdir(_ req: Request) throws -> HTTPResponseStatus {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
         let requestedPath = path.replacingOccurrences(of: "/mkdir", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
@@ -56,7 +56,7 @@ class FileManagerController {
     }
     
     func touch(_ req: Request) throws -> HTTPResponseStatus {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
         let requestedPath = path.replacingOccurrences(of: "/touch", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
@@ -70,8 +70,8 @@ class FileManagerController {
     
     func mv(_ req: Request) throws -> HTTPResponseStatus {
         do {
-            guard let from = req.query[String.self, at: "from"],
-                  let to = req.query[String.self, at: "to"] else { return HTTPResponseStatus.init(statusCode: 500) }
+            guard let from = req.query[String.self, at: "from"]?.removingPercentEncoding,
+                  let to = req.query[String.self, at: "to"]?.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
             
             let moveObject = MoveObject(from: from, to: to)
             try FileManager.default.moveItem(at: moveObject.fromURL, to: moveObject.toURL)
@@ -82,7 +82,7 @@ class FileManagerController {
     }
     
     func read(_ req: Request) throws -> Future<String> {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return req.eventLoop.newFailedFuture(error: NotFound()) }
         let requestedPath = path.replacingOccurrences(of: "/read", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
@@ -94,12 +94,12 @@ class FileManagerController {
                 return req.eventLoop.newFailedFuture(error: NotFound())
             }
         } catch {
-            return req.eventLoop.newSucceededFuture(result: "")
+            return req.eventLoop.newFailedFuture(error: NotFound())
         }
     }
     
     func binaryRead(_ req: Request) throws -> Future<Response> {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return req.eventLoop.newFailedFuture(error: NotFound()) }
         let requestedPath = path.replacingOccurrences(of: "/binaryread", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
     
@@ -113,7 +113,7 @@ class FileManagerController {
     }
     
     func write(_ req: Request) throws -> HTTPResponseStatus {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
         let requestedPath = path.replacingOccurrences(of: "/write", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
@@ -133,7 +133,7 @@ class FileManagerController {
     }
     
     func upload(_ req: Request) throws -> HTTPResponseStatus {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
         let requestedPath = path.replacingOccurrences(of: "/upload", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
@@ -148,7 +148,7 @@ class FileManagerController {
     }
     
     func rm(_ req: Request) throws -> HTTPResponseStatus {
-        let path = req.http.url.absoluteString
+        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
         let requestedPath = path.replacingOccurrences(of: "/rmdir", with: "").replacingOccurrences(of: "/rm", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
@@ -171,9 +171,10 @@ class FileManagerController {
     }
     
     private func setOwnership(for file: URL) {
+        guard let path = file.path.removingPercentEncoding else { return }
         let task = Process()
         task.launchPath = "/bin/chown"
-        task.arguments = ["codewerks:codewerks", file.path]
+        task.arguments = ["codewerks:codewerks", path]
         task.launch()
     }
     

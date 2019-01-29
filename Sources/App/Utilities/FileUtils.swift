@@ -24,7 +24,7 @@ struct FileUtilities {
     static let baseURL = URL(fileURLWithPath: "/home/codewerks/project")
 //    static let baseURL = URL(fileURLWithPath: "/Users/aaron/Developer/CodewerksProjects/SwiftExecutor")
 
-    static let ignoreFiles = [".build", ".git"]
+    static let ignoreFiles = [".build", ".git", "tmp"]
     
     /// The resource keys we want to grab for each file
     static let propertyKeys: [URLResourceKey] = [.nameKey, .fileSizeKey, .isHiddenKey, .isDirectoryKey, .contentAccessDateKey]
