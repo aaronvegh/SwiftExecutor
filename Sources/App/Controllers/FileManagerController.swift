@@ -161,7 +161,7 @@ class FileManagerController {
     }
     
     func isDirty(_ req: Request) throws -> HTTPResponseStatus {
-        let checkPath = URL(fileURLWithPath: "/home/codewerks/.isDirty")
+        let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
         if FileManager.default.fileExists(atPath: checkPath.path) {
             try? FileManager.default.removeItem(at: checkPath)
             return HTTPResponseStatus.init(statusCode: 200)
