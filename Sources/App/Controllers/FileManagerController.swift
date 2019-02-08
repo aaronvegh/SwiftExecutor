@@ -19,6 +19,9 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         do {
             var lsResult = [FileItem]()
             let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
@@ -35,8 +38,10 @@ class FileManagerController {
                     lsResult.append(fileItem)
                 }
             }
+            logger?.debug("200 Success \(lsResult.count) items")
             return req.eventLoop.newSucceededFuture(result: lsResult)
-        } catch {
+        } catch (let error) {
+            logger?.debug("500 Failure: \(error.localizedDescription)")
             return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
         }
     }
@@ -46,11 +51,16 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/mkdir", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         do {
             try FileManager.default.createDirectory(at: workingPath, withIntermediateDirectories: true, attributes: nil)
             setOwnership(for: workingPath)
+            logger?.debug("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
-        } catch {
+        } catch (let error) {
+            logger?.debug("500 Failure: \(error.localizedDescription)")
             return HTTPResponseStatus.init(statusCode: 500)
         }
     }
@@ -60,23 +70,34 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/touch", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         if FileManager.default.createFile(atPath: workingPath.path, contents: nil, attributes: nil) {
             setOwnership(for: workingPath)
+            logger?.debug("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
         } else {
+            logger?.debug("500 Failure: Can't create file at path: \(workingPath.path)")
             return HTTPResponseStatus.init(statusCode: 500)
         }
     }
     
     func mv(_ req: Request) throws -> HTTPResponseStatus {
+        let logger = try? req.sharedContainer.make(Logger.self)
         do {
             guard let from = req.query[String.self, at: "from"]?.removingPercentEncoding,
                   let to = req.query[String.self, at: "to"]?.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
             
+            logger?.debug(req.description)
+            
             let moveObject = MoveObject(from: from, to: to)
             try FileManager.default.moveItem(at: moveObject.fromURL, to: moveObject.toURL)
+            
+            logger?.debug("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
-        } catch {
+        } catch (let error) {
+            logger?.debug("500 Failure: \(error.localizedDescription)")
             return HTTPResponseStatus.init(statusCode: 500)
         }
     }
@@ -86,14 +107,20 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/read", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         do {
             if FileManager.default.fileExists(atPath: workingPath.path) {
                 let contents = try String(contentsOf: workingPath)
+                logger?.debug("200 Success")
                 return req.eventLoop.newSucceededFuture(result: contents)
             } else {
+                logger?.debug("500 Failure: File not available at \(workingPath.path)")
                 return req.eventLoop.newFailedFuture(error: NotFound())
             }
-        } catch {
+        } catch (let error) {
+            logger?.debug("500 Failure: \(error.localizedDescription)")
             return req.eventLoop.newFailedFuture(error: NotFound())
         }
     }
@@ -103,12 +130,17 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/binaryread", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
     
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: workingPath.path, isDirectory: &isDir), !isDir.boolValue else {
+            logger?.debug("500 Failure: File doesn't exist at \(workingPath.path)")
             return req.eventLoop.newFailedFuture(error: NotFound())
         }
         
         // stream the file
+        logger?.debug("200 Success")
         return try req.streamFile(at: workingPath.path)
     }
     
@@ -117,6 +149,8 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/write", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
         
         let contentType = req.http.headers["Content-Type"]
         if contentType.contains("text/plain"), let bytes = req.http.body.data {
@@ -124,11 +158,14 @@ class FileManagerController {
             do {
                 try content?.write(to: workingPath, atomically: true, encoding: String.Encoding.utf8)
                 setOwnership(for: workingPath)
+                logger?.debug("200 Success")
                 return HTTPResponseStatus.init(statusCode: 200)
-            } catch {
+            } catch (let error) {
+                logger?.debug("500 Failure: \(error.localizedDescription)")
                 return HTTPResponseStatus.init(statusCode: 403)
             }
         }
+        logger?.debug("500 Failure: File is not plain text")
         return HTTPResponseStatus.init(statusCode: 500)
     }
     
@@ -137,12 +174,17 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/upload", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         do {
             guard let payload = req.http.body.data else { return HTTPResponseStatus.init(statusCode: 500) }
             try payload.write(to: workingPath)
             setOwnership(for: workingPath)
+            logger?.debug("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
-        } catch {
+        } catch (let error) {
+            logger?.debug("500 Failure: \(error.localizedDescription)")
             return HTTPResponseStatus.init(statusCode: 200)
         }
     }
@@ -152,20 +194,30 @@ class FileManagerController {
         let requestedPath = path.replacingOccurrences(of: "/rmdir", with: "").replacingOccurrences(of: "/rm", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         do {
             try FileManager.default.removeItem(at: workingPath)
+            logger?.debug("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
-        } catch {
+        } catch (let error) {
+            logger?.debug("500 Failure: \(error.localizedDescription)")
             return HTTPResponseStatus.init(statusCode: 403)
         }
     }
     
     func isDirty(_ req: Request) throws -> HTTPResponseStatus {
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.debug(req.description)
+        
         let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
         if FileManager.default.fileExists(atPath: checkPath.path) {
             try? FileManager.default.removeItem(at: checkPath)
+            logger?.debug("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
         } else {
+            logger?.debug("403 File not found")
             return HTTPResponseStatus.init(statusCode: 403)
         }
     }

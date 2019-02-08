@@ -3,12 +3,6 @@ import Vapor
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
     
-    router.get(PathComponent.catchall) { req -> Response in
-        let logger = try? req.sharedContainer.make(Logger.self)
-        logger?.debug(req.description)
-        return req.response()
-    }
-    
     let fmController = FileManagerController()
     router.get("ls", use: fmController.index)
     router.get(["ls", all], use: fmController.index)
