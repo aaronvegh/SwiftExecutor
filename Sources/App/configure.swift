@@ -1,4 +1,5 @@
 import FluentSQLite
+import SimpleFileLogger
 import Vapor
 
 /// Called before your application initializes.
@@ -17,6 +18,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     /// middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
     middlewares.use(TokenAuthMiddleware.self) // Authenticates incoming requests
+    
     services.register(middlewares)
 
     // Configure a SQLite database
@@ -26,6 +28,13 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     var databases = DatabasesConfig()
     databases.add(database: sqlite, as: .sqlite)
     services.register(databases)
+    
+    /// SimpleFileLogger
+    services.register(Logger.self) { container -> SimpleFileLogger in
+        return SimpleFileLogger(executableName: "SwiftExecutor",
+                                includeTimestamps: true)
+    }
+    config.prefer(SimpleFileLogger.self, for: Logger.self)
 
     /// Configure migrations
 //    var migrations = MigrationConfig()

@@ -65,15 +65,6 @@
         }
       },
       {
-        "package": "JWT",
-        "repositoryURL": "https://github.com/vapor/jwt.git",
-        "state": {
-          "branch": null,
-          "revision": "2e225c722bf26407c1c4bd11d341e48759f46095",
-          "version": "3.0.0"
-        }
-      },
-      {
         "package": "Multipart",
         "repositoryURL": "https://github.com/vapor/multipart.git",
         "state": {
@@ -188,6 +179,15 @@
           "branch": null,
           "revision": "157d3b15336caa882662cc75024dd04b2e225246",
           "version": "3.1.0"
+        }
+      },
+      {
+        "package": "SimpleFileLogger",
+        "repositoryURL": "https://github.com/hallee/vapor-simple-file-logger.git",
+        "state": {
+          "branch": null,
+          "revision": "82459a9f22652b07311500da416d3a0ec407c0aa",
+          "version": "1.0.1"
         }
       },
       {
