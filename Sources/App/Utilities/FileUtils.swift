@@ -21,8 +21,8 @@ struct FileAttributes {
 
 struct FileUtilities {
     
-//    static let baseURL = URL(fileURLWithPath: "/home/codewerks/project")
-    static let baseURL = URL(fileURLWithPath: "/Users/aaron/Developer/CodewerksProjects/SwiftExecutor")
+    static let baseURL = URL(fileURLWithPath: "/home/codewerks/project")
+//    static let baseURL = URL(fileURLWithPath: "/Users/aaron/Developer/CodewerksProjects/SwiftExecutor")
 
     static let ignoreFiles = [".build", ".git", "tmp"]
     
