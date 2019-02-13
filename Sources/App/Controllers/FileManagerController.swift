@@ -14,6 +14,10 @@ class FileManagerController {
         case ServerError
     }
     
+    func alive(_ req: Request) throws -> HTTPResponseStatus {
+        return HTTPResponseStatus.init(statusCode: 200)
+    }
+    
     func index(_ req: Request) throws -> Future<[FileItem]> {
         guard let path = req.http.url.absoluteString.removingPercentEncoding else { return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError) }
         let requestedPath = path.replacingOccurrences(of: "/ls", with: "")
