@@ -33,24 +33,29 @@ public final class TokenAuthMiddleware: Middleware, ServiceType {
     }
     
     public func respond(to request: Request, chainingTo next: Responder) throws -> EventLoopFuture<Response> {
-        if let bearer = request.http.headers.bearerAuthorization {
-            
-            let ownerToken = FileUtilities.shell("sudo curl -s --unix-socket /dev/lxd/sock http://x/1.0/config/user.token")
-//                let ownerToken = "c0336726-4a6d-4dc4-9450-64f52fb908aa"
-            
-            let httpRequest = HTTPRequest(method: .GET, url: "/users/valid", headers: ["Authorization": "Bearer \(bearer.token)"])
-            
-            return HTTPClient.connect(scheme: .https, hostname: "codewerks.app", port: 81, on: request).flatMap(to: Response.self, { client in
-                return client.send(httpRequest).flatMap(to: Response.self) { response in
-                    if response.body.description == ownerToken {
-                        return try next.respond(to: request)
-                    } else {
-                        return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError("Failed to get auth response from upstream."))
+        let path = request.http.url.absoluteString.removingPercentEncoding ?? ""
+        if !path.contains("filesChanged") {
+            if let bearer = request.http.headers.bearerAuthorization {
+                
+                let ownerToken = FileUtilities.shell("sudo curl -s --unix-socket /dev/lxd/sock http://x/1.0/config/user.token")
+    //                let ownerToken = "c0336726-4a6d-4dc4-9450-64f52fb908aa"
+                
+                let httpRequest = HTTPRequest(method: .GET, url: "/users/valid", headers: ["Authorization": "Bearer \(bearer.token)"])
+                
+                return HTTPClient.connect(scheme: .https, hostname: "codewerks.app", port: 81, on: request).flatMap(to: Response.self, { client in
+                    return client.send(httpRequest).flatMap(to: Response.self) { response in
+                        if response.body.description == ownerToken {
+                            return try next.respond(to: request)
+                        } else {
+                            return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError("Failed to get auth response from upstream."))
+                        }
                     }
-                }
-            })
+                })
+            } else {
+                return request.eventLoop.newFailedFuture(error: TokenError.ServerError("Client didn't send auth header."))
+            }
         } else {
-            return request.eventLoop.newFailedFuture(error: TokenError.ServerError("Client didn't send auth header."))
+            return try next.respond(to: request)
         }
     }
 }
