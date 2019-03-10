@@ -22,7 +22,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(middlewares)
 
     // Configure a SQLite database
-    let sqlite = try SQLiteDatabase(storage: .memory)
+    let sqlite = try SQLiteDatabase(storage: .file(path: DirectoryConfig.detect().workDir + "executor.sqlite"))
 
     /// Register the configured SQLite database to the database config.
     var databases = DatabasesConfig()
