@@ -10,7 +10,7 @@ import Vapor
 
 final class FileItem: Content {
     /// The unique identifier for this `FileItem`.
-//    var id: UUID?
+    var id: UUID?
     
     /// A URL string for the file item
     var name: String?
@@ -45,10 +45,10 @@ final class FileItem: Content {
     }
 }
 
-//extension FileItem: SQLiteUUIDModel { }
+extension FileItem: SQLiteUUIDModel { }
 
 /// Allows `FileItem` to be used as a dynamic migration.
-//extension FileItem: Migration { }
+extension FileItem: Migration { }
 
 /// Allows `FileItem` to be used as a dynamic parameter in route definitions.
 //extension FileItem: Parameter { }

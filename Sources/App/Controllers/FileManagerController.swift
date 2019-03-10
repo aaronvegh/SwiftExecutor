@@ -7,6 +7,7 @@
 
 import Vapor
 import Foundation
+import Fluent
 
 class FileManagerController {
     
@@ -26,27 +27,83 @@ class FileManagerController {
         let logger = try? req.sharedContainer.make(Logger.self)
         logger?.info(req.http.url.path)
         
-        do {
-            var lsResult = [FileItem]()
-            let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
-            for item in items {
-                if !FileUtilities.ignoreFiles.contains(item) {
-                    let itemURL = workingPath.appendingPathComponent(item)
-                    let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
-                    guard let itemMD5 = FileUtilities.md5(for: itemURL),
-                          let attributes = FileUtilities.attributes(for: itemURL) else { continue }
-                    let modDate = attributes.lastUpdated
-                    let isBinary = FileUtilities.isBinary(itemURL)
-                    let isDirectory = attributes.isDirectory
-                    let fileItem = FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
-                    lsResult.append(fileItem)
+        let promise: EventLoopPromise<[FileItem]> = req.eventLoop.newPromise()
+        DispatchQueue.global().async {
+            do {
+                var lsResult = [FileItem]()
+                let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
+                for item in items {
+                    if !FileUtilities.ignoreFiles.contains(item) {
+                        let itemURL = workingPath.appendingPathComponent(item)
+                        let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
+                        guard let itemMD5 = FileUtilities.md5(for: itemURL),
+                              let attributes = FileUtilities.attributes(for: itemURL) else { continue }
+                        let modDate = attributes.lastUpdated
+                        let isBinary = FileUtilities.isBinary(itemURL)
+                        let isDirectory = attributes.isDirectory
+                        
+                        let existingItem = try FileItem.query(on: req)
+                            .filter(\FileItem.name == remotePath)
+                            .first()
+                            .wait()
+                        
+                        if let item = existingItem {
+                            lsResult.append(item)
+                        } else {
+                            let fileItem = try FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
+                                .create(on: req)
+                                .wait()
+                            
+                            lsResult.append(fileItem)
+                        }
+                    }
+                }
+                
+                promise.succeed(result: lsResult)
+            } catch (let error) {
+                logger?.info("500 Failure: \(error.localizedDescription)")
+                promise.fail(error: error)
+            }
+        }
+        return promise.futureResult
+    }
+    
+    func filesChanged(_ req: Request) throws -> Future<HTTPResponseStatus> {
+        let path = req.query[String.self, at: "path"]?.removingPercentEncoding ?? ""
+        let flags = req.query[String.self, at: "flags"]?.removingPercentEncoding ?? ""
+        
+        switch flags {
+        case "IN_MOVED_FROM", "IN_DELETE":
+            // set is_deleted to true for this file
+            let workingPath = path.count > 0 ? FileUtilities.baseURL.appendingPathComponent(path) : FileUtilities.baseURL
+            let remotePath = FileUtilities.remotePath(for: workingPath, from: FileUtilities.baseURL)
+            let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
+            DispatchQueue.global().async {
+                do {
+                    let existingItem = try FileItem.query(on: req)
+                       .filter(\FileItem.name == remotePath)
+                       .first()
+                       .wait()
+                    
+                    if let fileItem = existingItem {
+                        fileItem.isDeleted = true
+                        _ = try fileItem.update(on: req).wait()
+                    }
+                    promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
+                } catch (let error) {
+                    promise.fail(error: error)
                 }
             }
-            logger?.info("200 Success \(lsResult.count) items")
-            return req.eventLoop.newSucceededFuture(result: lsResult)
-        } catch (let error) {
-            logger?.info("500 Failure: \(error.localizedDescription)")
-            return req.eventLoop.newFailedFuture(error: FileManagerErrors.ServerError)
+            return promise.futureResult
+        default:
+            // touch .is_dirty
+            let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
+            if FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil) {
+                setOwnership(for: checkPath)
+                return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 200) }
+            } else {
+                return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 500) }
+            }
         }
     }
     
@@ -87,23 +144,41 @@ class FileManagerController {
         }
     }
     
-    func mv(_ req: Request) throws -> HTTPResponseStatus {
+    func mv(_ req: Request) throws -> Future<HTTPResponseStatus> {
         let logger = try? req.sharedContainer.make(Logger.self)
+        
+        let from = req.query[String.self, at: "from"]?.removingPercentEncoding ?? ""
+        let to = req.query[String.self, at: "to"]?.removingPercentEncoding ?? ""
+        
+        logger?.info(req.http.url.path)
+        
+        let moveObject = MoveObject(from: from, to: to)
+        let remotePath = FileUtilities.remotePath(for: moveObject.fromURL, from: FileUtilities.baseURL)
         do {
-            guard let from = req.query[String.self, at: "from"]?.removingPercentEncoding,
-                  let to = req.query[String.self, at: "to"]?.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
-            
-            logger?.info(req.http.url.path)
-            
-            let moveObject = MoveObject(from: from, to: to)
             try FileManager.default.moveItem(at: moveObject.fromURL, to: moveObject.toURL)
-            
-            logger?.info("200 Success")
-            return HTTPResponseStatus.init(statusCode: 200)
-        } catch (let error) {
-            logger?.info("500 Failure: \(error.localizedDescription)")
-            return HTTPResponseStatus.init(statusCode: 500)
+        } catch (_) {
+            return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 500) }
         }
+        
+        let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
+        DispatchQueue.global().async {
+            do {
+                let fileItem = try FileItem.query(on: req)
+                    .filter(\FileItem.name == remotePath)
+                    .first()
+                    .wait()
+                if let fromItem = fileItem {
+                    try fromItem.delete(on: req)
+                        .wait()
+                }
+                promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
+            } catch (let error) {
+                logger?.info("500 Failure: \(error.localizedDescription)")
+                promise.fail(error: error)
+            }
+        }
+        logger?.info("200 Success")
+        return promise.futureResult
     }
     
     func read(_ req: Request) throws -> Future<String> {
@@ -193,22 +268,36 @@ class FileManagerController {
         }
     }
     
-    func rm(_ req: Request) throws -> HTTPResponseStatus {
-        guard let path = req.http.url.absoluteString.removingPercentEncoding else { return HTTPResponseStatus.init(statusCode: 500) }
+    func rm(_ req: Request) throws -> Future<HTTPResponseStatus> {
+        let path = req.http.url.absoluteString.removingPercentEncoding ?? ""
         let requestedPath = path.replacingOccurrences(of: "/rmdir", with: "").replacingOccurrences(of: "/rm", with: "")
         let workingPath = requestedPath.count > 0 ? FileUtilities.baseURL.appendingPathComponent(requestedPath) : FileUtilities.baseURL
         
         let logger = try? req.sharedContainer.make(Logger.self)
         logger?.info(req.http.url.path)
         
-        do {
-            try FileManager.default.removeItem(at: workingPath)
-            logger?.info("200 Success")
-            return HTTPResponseStatus.init(statusCode: 200)
-        } catch (let error) {
-            logger?.info("500 Failure: \(error.localizedDescription)")
-            return HTTPResponseStatus.init(statusCode: 403)
+        let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
+        DispatchQueue.global().async {
+            do {
+                try FileManager.default.removeItem(at: workingPath)
+                logger?.info("200 Success")
+                let remotePath = FileUtilities.remotePath(for: workingPath, from: FileUtilities.baseURL)
+                let fileItem = try FileItem.query(on: req)
+                    .filter(\FileItem.name == remotePath)
+                    .first()
+                    .wait()
+                
+                if let rmItem = fileItem {
+                    _ = try rmItem.delete(on: req).wait()
+                }
+
+                promise.succeed(result: .ok)
+            } catch (let error) {
+                logger?.info("500 Failure: \(error.localizedDescription)")
+                promise.fail(error: error)
+            }
         }
+        return promise.futureResult
     }
     
     func isDirty(_ req: Request) throws -> HTTPResponseStatus {

@@ -37,8 +37,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     config.prefer(SimpleFileLogger.self, for: Logger.self)
 
     /// Configure migrations
-//    var migrations = MigrationConfig()
-//    migrations.add(model: FileItem.self, database: .sqlite)
-//    services.register(migrations)
+    var migrations = MigrationConfig()
+    migrations.add(model: FileItem.self, database: .sqlite)
+    services.register(migrations)
 
 }

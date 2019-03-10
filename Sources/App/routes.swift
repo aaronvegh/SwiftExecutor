@@ -36,4 +36,5 @@ public func routes(_ router: Router) throws {
     router.get(["rmdir", all], use: fmController.rm)
     
     router.get("isDirty", use: fmController.isDirty)
+    router.get("filesChanged", use: fmController.filesChanged)
 }
