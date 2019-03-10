@@ -89,6 +89,10 @@ class FileManagerController {
                         fileItem.isDeleted = true
                         _ = try fileItem.update(on: req).wait()
                     }
+                    
+                    let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
+                    FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil)
+                    self.setOwnership(for: checkPath)
                     promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
                 } catch (let error) {
                     promise.fail(error: error)
