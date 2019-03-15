@@ -30,7 +30,6 @@ class FileManagerController {
         let promise: EventLoopPromise<[FileItem]> = req.eventLoop.newPromise()
         DispatchQueue.global().async {
             do {
-                var lsResult = [FileItem]()
                 let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
                 for item in items {
                     if !FileUtilities.ignoreFiles.contains(item) {
@@ -47,19 +46,16 @@ class FileManagerController {
                             .first()
                             .wait()
                         
-                        if let item = existingItem {
-                            lsResult.append(item)
-                        } else {
-                            let fileItem = try FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
+                        if existingItem == nil {
+                            _ = try FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
                                 .create(on: req)
                                 .wait()
-                            
-                            lsResult.append(fileItem)
                         }
                     }
                 }
                 
-                promise.succeed(result: lsResult)
+                let flattenedResults = try FileItem.contentsOfDirectory(using: req, directory: requestedPath).wait()
+                promise.succeed(result: flattenedResults)
             } catch (let error) {
                 logger?.info("500 Failure: \(error.localizedDescription)")
                 promise.fail(error: error)
@@ -172,8 +168,8 @@ class FileManagerController {
                     .first()
                     .wait()
                 if let fromItem = fileItem {
-                    try fromItem.delete(on: req)
-                        .wait()
+                    fromItem.isDeleted = true
+                    _ = try fromItem.update(on: req).wait()
                 }
                 promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
             } catch (let error) {
@@ -292,7 +288,8 @@ class FileManagerController {
                     .wait()
                 
                 if let rmItem = fileItem {
-                    _ = try rmItem.delete(on: req).wait()
+                    rmItem.isDeleted = true
+                    _ = try rmItem.update(on: req).wait()
                 }
 
                 promise.succeed(result: .ok)

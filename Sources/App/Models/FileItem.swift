@@ -43,6 +43,10 @@ final class FileItem: Content {
         self.modDate = modDate
         self.parentDir = parentDir
     }
+    
+    static func contentsOfDirectory(using request: Request, directory: String) -> Future<[FileItem]> {
+        return FileItem.query(on: request).filter(\FileItem.parentDir == directory).all()
+    }
 }
 
 extension FileItem: SQLiteUUIDModel { }
