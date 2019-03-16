@@ -294,9 +294,9 @@ class FileManagerController {
         let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
         DispatchQueue.global().async {
             do {
-                try FileManager.default.removeItem(at: workingPath)
-                logger?.info("200 Success")
                 let remotePath = FileUtilities.remotePath(for: workingPath, from: FileUtilities.baseURL)
+                
+                logger?.info("Find deleting item at \(remotePath)")
                 let fileItem = try FileItem.query(on: req)
                     .filter(\FileItem.name == remotePath)
                     .first()
@@ -306,6 +306,9 @@ class FileManagerController {
                     rmItem.isDeleted = true
                     _ = try rmItem.update(on: req).wait()
                 }
+                
+                try FileManager.default.removeItem(at: workingPath)
+                logger?.info("200 Success")
 
                 promise.succeed(result: .ok)
             } catch (let error) {
