@@ -79,10 +79,9 @@ class FileManagerController {
                 let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
                 DispatchQueue.global().async {
                     do {
-                        logger?.info("Looking for match on \(remotePath) at \(workingPath.path)")
+                        logger?.info("Looking for match on \(changeObject.path)")
                         let existingItem = try FileItem.query(on: req)
-                            .filter(\FileItem.name == remotePath)
-                            .filter(\FileItem.parentDir == workingPath.path)
+                            .filter(\FileItem.name == changeObject.path)
                             .first()
                             .wait()
                         
