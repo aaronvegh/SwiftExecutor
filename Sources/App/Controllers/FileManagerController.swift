@@ -66,9 +66,13 @@ class FileManagerController {
     
     func filesChanged(_ req: Request) throws -> Future<HTTPResponseStatus> {
         
+        let logger = try? req.sharedContainer.make(Logger.self)
+        logger?.info(req.http.url.path)
+        
         return try req.content.decode(FileChangeObject.self).flatMap { changeObject in
             switch changeObject.flags {
             case "IN_MOVED_FROM", "IN_DELETE":
+                logger?.info("Acting on \(changeObject.flags)")
                 // set is_deleted to true for this file
                 let workingPath = changeObject.path.count > 0 ? FileUtilities.baseURL.appendingPathComponent(changeObject.path) : FileUtilities.baseURL
                 let remotePath = FileUtilities.remotePath(for: workingPath, from: FileUtilities.baseURL)
@@ -80,27 +84,33 @@ class FileManagerController {
                             .first()
                             .wait()
                         
+                        logger?.info("Found existing item: \(String(describing: existingItem))")
                         if let fileItem = existingItem {
                             fileItem.isDeleted = true
                             _ = try fileItem.update(on: req).wait()
                         }
                         
+                        logger?.info("Touching .is_dirty...")
                         let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
                         FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil)
                         self.setOwnership(for: checkPath)
                         promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
                     } catch (let error) {
+                        logger?.info("Crapped out!")
                         promise.fail(error: error)
                     }
                 }
                 return promise.futureResult
             default:
                 // touch .is_dirty
+                logger?.info("Touching .is_dirty...")
                 let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
                 if FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil) {
                     self.setOwnership(for: checkPath)
+                    logger?.info("Success")
                     return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 200) }
                 } else {
+                    logger?.info("Failed!")
                     return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 500) }
                 }
             }
