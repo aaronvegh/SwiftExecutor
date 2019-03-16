@@ -86,7 +86,12 @@ struct FileUtilities {
     static func remotePath(for url: URL, from root: URL) -> String {
         let rootString = root.absoluteString
         let urlString = url.absoluteString
-        return "/\(urlString.replacingOccurrences(of: rootString, with: ""))"
+        let candidate = urlString.replacingOccurrences(of: rootString, with: "")
+        if candidate.first != "/" {
+            return "/(candidate)"
+        } else {
+            return candidate
+        }
     }
     
     static func shell(_ command: String) -> String {
