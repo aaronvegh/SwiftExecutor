@@ -47,12 +47,12 @@ public final class TokenAuthMiddleware: Middleware, ServiceType {
                         if response.body.description == ownerToken {
                             return try next.respond(to: request)
                         } else {
-                            return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError("Failed to get auth response from upstream."))
+                            return request.eventLoop.newFailedFuture(error: TokenError.AuthenticationError("Failed to get auth response from upstream with path \(path)"))
                         }
                     }
                 })
             } else {
-                return request.eventLoop.newFailedFuture(error: TokenError.ServerError("Client didn't send auth header."))
+                return request.eventLoop.newFailedFuture(error: TokenError.ServerError("Client didn't send auth header for \(path)"))
             }
         } else {
             return try next.respond(to: request)

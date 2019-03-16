@@ -65,46 +65,50 @@ class FileManagerController {
     }
     
     func filesChanged(_ req: Request) throws -> Future<HTTPResponseStatus> {
-        let path = req.query[String.self, at: "path"]?.removingPercentEncoding ?? ""
-        let flags = req.query[String.self, at: "flags"]?.removingPercentEncoding ?? ""
         
-        switch flags {
-        case "IN_MOVED_FROM", "IN_DELETE":
-            // set is_deleted to true for this file
-            let workingPath = path.count > 0 ? FileUtilities.baseURL.appendingPathComponent(path) : FileUtilities.baseURL
-            let remotePath = FileUtilities.remotePath(for: workingPath, from: FileUtilities.baseURL)
-            let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
-            DispatchQueue.global().async {
-                do {
-                    let existingItem = try FileItem.query(on: req)
-                       .filter(\FileItem.name == remotePath)
-                       .first()
-                       .wait()
-                    
-                    if let fileItem = existingItem {
-                        fileItem.isDeleted = true
-                        _ = try fileItem.update(on: req).wait()
+        return try req.content.decode(FileChangeObject.self).flatMap { changeObject in
+            switch changeObject.flags {
+            case "IN_MOVED_FROM", "IN_DELETE":
+                // set is_deleted to true for this file
+                let workingPath = changeObject.path.count > 0 ? FileUtilities.baseURL.appendingPathComponent(changeObject.path) : FileUtilities.baseURL
+                let remotePath = FileUtilities.remotePath(for: workingPath, from: FileUtilities.baseURL)
+                let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
+                DispatchQueue.global().async {
+                    do {
+                        let existingItem = try FileItem.query(on: req)
+                            .filter(\FileItem.name == remotePath)
+                            .first()
+                            .wait()
+                        
+                        if let fileItem = existingItem {
+                            fileItem.isDeleted = true
+                            _ = try fileItem.update(on: req).wait()
+                        }
+                        
+                        let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
+                        FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil)
+                        self.setOwnership(for: checkPath)
+                        promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
+                    } catch (let error) {
+                        promise.fail(error: error)
                     }
-                    
-                    let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
-                    FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil)
+                }
+                return promise.futureResult
+            default:
+                // touch .is_dirty
+                let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
+                if FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil) {
                     self.setOwnership(for: checkPath)
-                    promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
-                } catch (let error) {
-                    promise.fail(error: error)
+                    return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 200) }
+                } else {
+                    return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 500) }
                 }
             }
-            return promise.futureResult
-        default:
-            // touch .is_dirty
-            let checkPath = URL(fileURLWithPath: "/home/codewerks/.is_dirty")
-            if FileManager.default.createFile(atPath: checkPath.path, contents: nil, attributes: nil) {
-                setOwnership(for: checkPath)
-                return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 200) }
-            } else {
-                return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 500) }
-            }
         }
+//        let path = req.parameters["path"]?.removingPercentEncoding ?? ""
+//        let flags = req.query[String.self, at: "flags"]?.removingPercentEncoding ?? ""
+//
+        
     }
     
     func mkdir(_ req: Request) throws -> HTTPResponseStatus {
