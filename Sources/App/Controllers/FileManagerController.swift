@@ -74,14 +74,14 @@ class FileManagerController {
             case "IN_MOVED_FROM", "IN_DELETE":
                 logger?.info("Acting on \(changeObject.flags)")
                 // set is_deleted to true for this file
-                let workingPath = changeObject.path.count > 0 ? FileUtilities.baseURL.appendingPathComponent(changeObject.path) : FileUtilities.baseURL
+                let workingPath = URL(fileURLWithPath: changeObject.path)
                 let remotePath = FileUtilities.remotePath(for: workingPath, from: FileUtilities.baseURL)
                 let promise: EventLoopPromise<HTTPResponseStatus> = req.eventLoop.newPromise()
                 DispatchQueue.global().async {
                     do {
-                        logger?.info("Looking for match on \(changeObject.path)")
+                        logger?.info("Looking for match on \(remotePath)")
                         let existingItem = try FileItem.query(on: req)
-                            .filter(\FileItem.name == changeObject.path)
+                            .filter(\FileItem.name == remotePath)
                             .first()
                             .wait()
                         
