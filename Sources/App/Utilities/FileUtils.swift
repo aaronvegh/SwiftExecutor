@@ -88,7 +88,7 @@ struct FileUtilities {
         let urlString = url.absoluteString
         let candidate = urlString.replacingOccurrences(of: rootString, with: "")
         if candidate.first != "/" {
-            return "/(candidate)"
+            return "/\(candidate)"
         } else {
             return candidate
         }
