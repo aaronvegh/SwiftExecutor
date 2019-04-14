@@ -115,11 +115,7 @@ class FileManagerController {
                     return Future.map(on: req) { HTTPResponseStatus.init(statusCode: 500) }
                 }
             }
-        }
-//        let path = req.parameters["path"]?.removingPercentEncoding ?? ""
-//        let flags = req.query[String.self, at: "flags"]?.removingPercentEncoding ?? ""
-//
-        
+        }        
     }
     
     func mkdir(_ req: Request) throws -> HTTPResponseStatus {
@@ -168,7 +164,8 @@ class FileManagerController {
         logger?.info(req.http.url.path)
         
         let moveObject = MoveObject(from: from, to: to)
-        let remotePath = FileUtilities.remotePath(for: moveObject.fromURL, from: FileUtilities.baseURL)
+        let fromPath = FileUtilities.remotePath(for: moveObject.fromURL, from: FileUtilities.baseURL)
+        let toPath = FileUtilities.remotePath(for: moveObject.toURL, from: FileUtilities.baseURL)
         do {
             try FileManager.default.moveItem(at: moveObject.fromURL, to: moveObject.toURL)
         } catch (_) {
@@ -179,12 +176,21 @@ class FileManagerController {
         DispatchQueue.global().async {
             do {
                 let fileItem = try FileItem.query(on: req)
-                    .filter(\FileItem.name == remotePath)
+                    .filter(\FileItem.name == fromPath)
                     .first()
                     .wait()
                 if let fromItem = fileItem {
                     fromItem.isDeleted = true
                     _ = try fromItem.update(on: req).wait()
+                }
+                
+                let toItem = try FileItem.query(on: req)
+                    .filter(\FileItem.name == toPath)
+                    .first()
+                    .wait()
+                if let toItem = toItem {
+                    toItem.isDeleted = false
+                    _ = try toItem.update(on: req).wait()
                 }
                 promise.succeed(result: HTTPResponseStatus.init(statusCode: 200))
             } catch (let error) {
