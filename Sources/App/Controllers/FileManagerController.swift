@@ -309,6 +309,7 @@ class FileManagerController {
                     .wait()
                 
                 if let rmItem = fileItem {
+                    logger?.info("Marking deleted: \(remotePath)")
                     rmItem.isDeleted = true
                     _ = try rmItem.update(on: req).wait()
                 }
