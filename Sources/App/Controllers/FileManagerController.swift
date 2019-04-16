@@ -28,40 +28,53 @@ class FileManagerController {
         logger?.info(req.http.url.path)
         
         let promise: EventLoopPromise<[FileItem]> = req.eventLoop.newPromise()
+        
+        do {
+            let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
+            for item in items {
+                if !FileUtilities.ignoreFiles.contains(item) {
+                    let itemURL = workingPath.appendingPathComponent(item)
+                    self.createIfNeeded(itemURL: itemURL, requestedPath: requestedPath, on: req)
+                }
+            }
+            
+            let flattenedResults = try FileItem.contentsOfDirectory(using: req, directory: requestedPath).wait()
+            promise.succeed(result: flattenedResults)
+        } catch (let error) {
+            logger?.info("500 Failure: \(error.localizedDescription)")
+            promise.fail(error: error)
+        }
+    
+        return promise.futureResult
+    }
+    
+    private func createIfNeeded(itemURL: URL, requestedPath: String, on request: Request) {
+        let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
+        guard let itemMD5 = FileUtilities.md5(for: itemURL),
+            let attributes = FileUtilities.attributes(for: itemURL) else { return }
+        let modDate = attributes.lastUpdated
+        let isBinary = FileUtilities.isBinary(itemURL)
+        let isDirectory = attributes.isDirectory
+        
         DispatchQueue.global().async {
             do {
-                let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
-                for item in items {
-                    if !FileUtilities.ignoreFiles.contains(item) {
-                        let itemURL = workingPath.appendingPathComponent(item)
-                        let remotePath = FileUtilities.remotePath(for: itemURL, from: FileUtilities.baseURL)
-                        guard let itemMD5 = FileUtilities.md5(for: itemURL),
-                              let attributes = FileUtilities.attributes(for: itemURL) else { continue }
-                        let modDate = attributes.lastUpdated
-                        let isBinary = FileUtilities.isBinary(itemURL)
-                        let isDirectory = attributes.isDirectory
-                        
-                        let existingItem = try FileItem.query(on: req)
-                            .filter(\FileItem.name == remotePath)
-                            .first()
-                            .wait()
-                        
-                        if existingItem == nil {
-                            _ = try FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
-                                .create(on: req)
-                                .wait()
-                        }
-                    }
-                }
+                let existingItem = try FileItem.query(on: request)
+                    .filter(\FileItem.name == remotePath)
+                    .first()
+                    .wait()
                 
-                let flattenedResults = try FileItem.contentsOfDirectory(using: req, directory: requestedPath).wait()
-                promise.succeed(result: flattenedResults)
-            } catch (let error) {
-                logger?.info("500 Failure: \(error.localizedDescription)")
-                promise.fail(error: error)
+                if let existingItem = existingItem {
+                    existingItem.isDeleted = false
+                    _ = try existingItem.update(on: request).wait()
+                } else {
+                    _ = try FileItem(name: remotePath, isDeleted: false, isDirectory: isDirectory, isBinary: isBinary, md5: itemMD5, modDate: modDate, parentDir: requestedPath)
+                        .create(on: request)
+                        .wait()
+                }
+            } catch {
+                return
             }
         }
-        return promise.futureResult
     }
     
     func filesChanged(_ req: Request) throws -> Future<HTTPResponseStatus> {
@@ -129,6 +142,7 @@ class FileManagerController {
         do {
             try FileManager.default.createDirectory(at: workingPath, withIntermediateDirectories: true, attributes: nil)
             setOwnership(for: workingPath)
+            createIfNeeded(itemURL: workingPath, requestedPath: requestedPath, on: req)
             logger?.info("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
         } catch (let error) {
@@ -147,6 +161,7 @@ class FileManagerController {
         
         if FileManager.default.createFile(atPath: workingPath.path, contents: nil, attributes: nil) {
             setOwnership(for: workingPath)
+            createIfNeeded(itemURL: workingPath, requestedPath: requestedPath, on: req)
             logger?.info("200 Success")
             return HTTPResponseStatus.init(statusCode: 200)
         } else {
@@ -308,6 +323,7 @@ class FileManagerController {
                     .first()
                     .wait()
                 
+                logger?.info("Attempting to delete \(String(describing: fileItem))")
                 if let rmItem = fileItem {
                     logger?.info("Marking deleted: \(remotePath)")
                     rmItem.isDeleted = true
@@ -345,6 +361,7 @@ class FileManagerController {
         guard let path = file.path.removingPercentEncoding else { return }
         let task = Process()
         task.launchPath = "/bin/chown"
+//        task.launchPath = "/usr/sbin/chown"
         task.arguments = ["codewerks:codewerks", path]
         task.launch()
     }
