@@ -14,5 +14,5 @@ public func app(_ env: Environment) throws -> Application {
 
 struct ExecutorEnvironment {
 //    static let mode = "development"
-    let mode = "production"
+    static let mode = "production"
 }
