@@ -29,20 +29,22 @@ class FileManagerController {
         
         let promise: EventLoopPromise<[FileItem]> = req.eventLoop.newPromise()
         
-        do {
-            let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
-            for item in items {
-                if !FileUtilities.ignoreFiles.contains(item) {
-                    let itemURL = workingPath.appendingPathComponent(item)
-                    self.createIfNeeded(itemURL: itemURL, requestedPath: requestedPath, on: req)
+        DispatchQueue.global().async {
+            do {
+                let items = try FileManager.default.contentsOfDirectory(atPath: workingPath.path)
+                for item in items {
+                    if !FileUtilities.ignoreFiles.contains(item) {
+                        let itemURL = workingPath.appendingPathComponent(item)
+                        self.createIfNeeded(itemURL: itemURL, requestedPath: requestedPath, on: req)
+                    }
                 }
+                
+                let flattenedResults = try FileItem.contentsOfDirectory(using: req, directory: requestedPath).wait()
+                promise.succeed(result: flattenedResults)
+            } catch (let error) {
+                logger?.info("500 Failure: \(error.localizedDescription)")
+                promise.fail(error: error)
             }
-            
-            let flattenedResults = try FileItem.contentsOfDirectory(using: req, directory: requestedPath).wait()
-            promise.succeed(result: flattenedResults)
-        } catch (let error) {
-            logger?.info("500 Failure: \(error.localizedDescription)")
-            promise.fail(error: error)
         }
     
         return promise.futureResult
@@ -360,8 +362,11 @@ class FileManagerController {
     private func setOwnership(for file: URL) {
         guard let path = file.path.removingPercentEncoding else { return }
         let task = Process()
-        task.launchPath = "/bin/chown"
-//        task.launchPath = "/usr/sbin/chown"
+        if ExecutorEnvironment.mode == "production" {
+            task.launchPath = "/bin/chown"
+        } else {
+            task.launchPath = "/usr/sbin/chown"
+        }
         task.arguments = ["codewerks:codewerks", path]
         task.launch()
     }

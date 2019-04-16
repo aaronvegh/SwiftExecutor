@@ -11,3 +11,8 @@ public func app(_ env: Environment) throws -> Application {
     try boot(app)
     return app
 }
+
+struct ExecutorEnvironment {
+//    static let mode = "development"
+    let mode = "production"
+}
